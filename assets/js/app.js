@@ -555,8 +555,8 @@ function validateInitialSigs(e){
                             "#" + python_tab_id + ":checked ~ #" + python_content.id +
                             "{display:block;}" +
                         "</style>"); //#tab_foo_com_python:checked ~ #python_foo_com_content{display:block;}
-                    python_content.querySelector(".howto_serve").id = "howto_serve_" + d_;
-                    python_content.querySelector(".howto_serve_label").htmlFor = "howto_serve_" + d_;
+//                  python_content.querySelector(".howto_serve").id = "howto_serve_" + d_;
+//                  python_content.querySelector(".howto_serve_label").htmlFor = "howto_serve_" + d_;
                     python_content.querySelector(".ssh").innerHTML = "";
                     python_content.querySelector(".ssh").appendChild(document.createTextNode("ssh ubuntu@" + d));
                     python_content.querySelector(".help-content a").href = link;
@@ -585,8 +585,8 @@ function validateInitialSigs(e){
                             "#" + file_tab_id + ":checked ~ #" + file_content.id +
                             "{display:block;}" +
                         "</style>"); //#tab_foo_com_file:checked ~ #file_foo_com_content{display:block;}
-                    file_content.querySelector(".howto_file").id = "howto_file_" + d_;
-                    file_content.querySelector(".howto_file_label").htmlFor = "howto_file_" + d_;
+//                    file_content.querySelector(".howto_file").id = "howto_file_" + d_;
+//                    file_content.querySelector(".howto_file_label").htmlFor = "howto_file_" + d_;
                     file_content.querySelector(".ssh").innerHTML = "";
                     file_content.querySelector(".ssh").appendChild(document.createTextNode("ssh ubuntu@" + d));
                     file_content.querySelector(".help-content a").href = link;
