@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get HTTPS for free! - Instant HTTPS</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
+	<link href="/assets/site.css?v=2" rel="stylesheet">
+
+    <script src="/assets/js/asn1js/int10.js"></script>
+    <script src="/assets/js/asn1js/base64.js"></script>
+    <script src="/assets/js/asn1js/hex.js"></script>
+    <script src="/assets/js/asn1js/asn1.js"></script>
+</head>
+<body>
+	<div class="container">
+		<div class="jumbotron">
+			<h2>Instant HTTPS</h2>
+			<p class="lead">You can now get free https certificates from the non-profit certificate
+        authority <a href="https://letsencrypt.org/" target="_blank">Let's Encrypt</a>!
+        This is a website that will take you through the manual steps to get your free
+        https certificate so you can make your own website use https! This website is
+        <a href="https://github.com/freekrai/howtogetfreehttps" target="_blank">open source</a>
+        and <strong>NEVER</strong> asks for your private keys. Never trust a website
+        that asks for your private keys!</p>
+        <!--TODO-->
+        <!--<a href="renew.html">Click here</a> to renew certs.-->
+        <!--<a href="revoke.html">Click here</a> to revoke certs.-->
+
+		</div>
+      
+    <div id="digest_error" class="error" style="display:none;">
+	    <div class="alert alert-danger" role="alert">
+	        ERROR: Your browser is not compatible with this website (this website
+	        needs WebCryptoAPI's crypto.subtle.digest()). Please upgrade to a modern
+	        browser (Firefox, Chrome, Safari, IE 11+).
+	    </div>
+    </div>
+
+	<div class="alert alert-info" role="alert">
+        <b>NOTE: This website is for people who know how to generate certificate signing
+        requests (CSRs)!</b> If you're not familiar with how to do this, please use the
+        official Let's Encrypt <a href="https://github.com/letsencrypt/letsencrypt" target="_blank">client</a>
+        that can automatically issue and install https certificates for you. This
+        website is designed for people who know what they are doing and just want to get
+        their free https certificate.
+    </div>
+
+    <hr/>
+
+    <!--############################-->
+    <!--##  Step 1: Account Info  ##-->
+    <!--############################-->
+<div class="panel panel-default">
+	<div class="panel-heading">
+		<h3 class="panel-title">Step 1: Account Info</h3>
+	</div>
+	<div class="panel-body">
+		<div class="alert alert-info" role="alert">
+	        Let's Encrypt requires that you register an account email and public key before
+	        issuing a certificate. The email is so that they can contact you if needed, and
+	        the public key is so you can securely sign your requests to issue/revoke/renew
+	        your certificates. <i><b>Keep your account private key secret!</b> Anyone who has it
+	        can impersonate you when making requests to Let's Encrypt!</i>
+	    </div>
+
+	    <div class="form-group">
+	        <label for="email">Account Email:</label><br/>
+	        <input id="email" type="text" class="form-control"  placeholder="(e.g. webmaster@yourdomain.com)"/>
+	    </div>
+	
+		<div class="form-group">	        
+	        <label for="pubkey">Account Public Key:</label><br/>
+	        <textarea id="pubkey"  class="form-control" rows=15 placeholder="-----BEGIN PUBLIC KEY----- ..."></textarea>
+	    </div>
+
+		<div class="alert alert-info" role="alert">
+	            How to generate a new account keypair using openssl:<br/>
+	            <ol>
+	                <li>
+	                    Generate an account private key if you don't have one:<br/>
+	                    (KEEP ACCOUNT.KEY SECRET!)<br/>
+	                    <code>openssl genrsa 4096 > account.key</code>
+	                </li>
+	                <li>
+	                    Print your public key:<br/>
+	                    <code>openssl rsa -in account.key -pubout</code>
+	                </li>
+	                <li>
+	                    Copy and paste the public key into the box below.<br/>
+	                </li>
+	            </ol>
+	    </div>
+        <button id="validate_account" type="submit" class="btn btn-default">Validate Account Info</button>
+        <span id="validate_account_status" style="display:none;"></span>
+	</div>
+</div>
+    <hr/>
+
+    <!--###########################################-->
+    <!--##  Step 2: Certificate Signing Request  ##-->
+    <!--###########################################-->
+<div class="panel panel-default">
+	<div class="panel-heading">
+		<h3 class="panel-title">Step 2: Certificate Signing Request</h3>
+	</div>
+	<div class="panel-body">
+		<div class="alert alert-info" role="alert">
+	        This is the certificate signing request (CSR) that you send to Let's Encrypt
+	        in order to issue you a signed certificate. It contains the website domains you
+	        want to issue certs for and the public key of your TLS private key. <i><b>Keep your
+	        TLS private key secret!</b> Anyone who has it can man-in-the-middle your website!</i>
+	    </div>
+	
+		<div class="alert alert-info" role="alert">
+            How to generate a new Certificate Signing Request (CSR):<br/>
+            <ol>
+                <li>
+                    Generate a TLS private key if you don't have one:<br/>
+                    (KEEP DOMAIN.KEY SECRET!)<br/>
+                    <code>openssl genrsa 4096 > domain.key</code>
+                </li>
+                <li>
+                    Generate a CSR for your the domains you want certs for:</br>
+                    (replace "foo.com" with your domain)</br>
+                    Linux:
+<pre>
+#change "/etc/ssl/openssl.cnf" as needed:
+#  Debian: /etc/ssl/openssl.cnf
+#  RHEL and CentOS: /etc/pki/tls/openssl.cnf
+#  Mac OSX: /System/Library/OpenSSL/openssl.cnf
+
+openssl req -new -sha256 -key domain.key -subj "/" \
+  -reqexts SAN -config &lt;(cat /etc/ssl/openssl.cnf \
+  &lt;(printf "[SAN]\nsubjectAltName=DNS:foo.com,DNS:www.foo.com"))
+</pre>
+                </li>
+                <li>
+                    Copy and paste the CSR into the box below.<br/>
+                </li>
+            </ol>
+		</div>
+		<div class="form-group">
+	        <label for="csr">Certificate Signing Request:</label><br/>
+	        <textarea id="csr" class="form-control" rows=15  placeholder="-----BEGIN CERTIFICATE REQUEST----- ..."></textarea>
+	    </div>
+        <button id="validate_csr" type="submit" class="btn btn-default">Validate CSR</button>
+        <span id="validate_csr_status" style="display:none;"></span>
+	</div>
+</div>	
+    <hr/>
+
+    <!--#############################-->
+    <!--##  Step 3: Sign Requests  ##-->
+    <!--#############################-->
+<div class="panel panel-default">
+	<div class="panel-heading">
+		<h3 class="panel-title">Step 3: Sign API Requests<span id="step3_pending"> (waiting...)</span></h3>
+	</div>
+	<div class="panel-body">
+	    <div id="step3" style="display:none;">
+			<div class="alert alert-info" role="alert">
+	            Let's Encrypt requires that you sign all of your requests to them with your
+	            account private key. Below are the requests that you will need to sign. The
+	            commands to do this are generated below so you can copy-and-paste them into your
+	            terminal. <i>Be sure to change the account private key location so it points to
+	            your real private key.</i>
+	        </div>
+	
+            <div class="help-content">
+                How to generate the needed signatures:<br/>
+                <ol>
+                    <li>
+                        Copy and paste each command below into your terminal (if your
+                        account private key isn't at "./account.key", change "./account.key"
+                        in the command to wherever it exists).
+                    </li>
+                    <li>
+                        Copy and paste the hex encoded signature output from the command
+                        into the text field below that command.
+                    </li>
+                </ol>
+            </div>
+	        <div class="form-group">
+	            <label>Run these signature commands in your terminal:</label><br/>
+	            <span id="step3_commands">
+	            </span>
+	            <span id="signing_template" style="display:none;">
+	                <input type="text" class="form-control"  value="echo ..." readonly/><br/>
+	                <input id="challenge_sig_foobar_com" type="text" class="form-control"  placeholder='Paste the hex output here (e.g. "(stdin)= f2cf67e4...")'/><br/>
+	            </span>
+	        </div>
+	
+	        <div class="form-group">
+	            <input id="validate_initial_sigs" type="submit" value="Validate Signatures"/>
+	            <span id="validate_initial_sigs_status" style="display:none;"></span>
+	        </div>
+	    </div>
+    </div>
+</div>
+    <hr/>
+
+    <!--##########################-->
+    <!--##  Step 4: Challenges  ##-->
+    <!--##########################-->
+<div class="panel panel-default">
+	<div class="panel-heading">
+		<h3 class="panel-title">Step 4: Verify Ownership<span id="step4_pending"> (waiting...)</span></h3>
+	</div>
+	<div class="panel-body">
+	    <div id="step4" style="display:none;">
+			<div class="alert alert-info" role="alert">
+	            Let's Encrypt requires you prove you own the domains you have in your CSR. You
+	            can do this by serving a specific file at a specific url under your domains.
+	            Below are the files you need to serve along with some copy-and-paste commands
+	            you can run on your website to start serving the file. Once you are serving
+	            the file on your website, click "I'm now running this on...". After that, you
+	            need to tell Let's Encrypt to check the above files to verify ownership of your
+	            domains. This request needs to be signed with your account private key. Below
+	            are the verification requests that you will need to sign. The commands to do
+	            this are generated below so you can copy-and-paste them into your terminal.
+	            <i>Be sure to change the account private key location so it points to your real
+	            private key.</i>
+	        </div>
+	
+	        <div id="challenge_domains">
+	        </div>
+	
+	        <div id="challenge_template" style="display:none;">
+	            <h3>Domain: <span class="domain">foobar.com</span></h3>
+	
+	            <div class="form-group">
+	                <label class="howto_sign_label help">(how do I do this?)</label>
+	                <input class="howto_sign help-checkbox" type="checkbox"/>
+	                <div class="help-content">
+	                    How to generate the needed signatures:<br/>
+	                    <ol>
+	                        <li>
+	                            Navigate in the terminal to the directory with account private
+	                            key ("account.key" or whatever you named it).
+	                        </li>
+	                        <li>
+	                            Copy and paste each command below into your terminal (if your
+	                            account private key isn't named "account.key", change "account.key"
+	                            in the command to whatever you named it).
+	                        </li>
+	                        <li>
+	                            Copy and paste the hex encoded signature output from the command
+	                            into the text field below that command.
+	                        </li>
+	                    </ol>
+	                </div>
+	                <label>Run this signature command in your terminal:</label><br/>
+	                <span class="step4_commands">
+	                </span>
+	            </div>
+	
+	            <div class="field tabs">
+	                <input type="radio" checked/>
+	                <label>Option 1 - python server</label>
+	
+	                <input type="radio">
+	                <label>Option 2 - file-based</label>
+	
+	                <br/>
+	
+	                <div class="tab">
+	                    <div class="help-content">
+	                        How to serve the challenge response on your domain:<br/>
+	                        <ol>
+	                            <li>
+	                                SSH into your domain as someone with sudo permissions:<br/>
+	                                <code class="ssh">ssh ubuntu@foobar.com</code>
+	                            </li>
+	                            <li>
+	                                Stop any webserver running on port 80, if any. If you had previously
+	                                been running another python command, you can kill it with Ctrl+C):<br/>
+	                                <code>sudo service nginx stop</code> &lt;-- example for nginx<br/>
+	                                <code>sudo apachectl -k graceful-stop</code> &lt;-- example for apache
+	                            </li>
+	                            <li>
+	                                Copy and paste the python command below into your terminal. This
+	                                command starts a temporary webserver that serves nothing but the
+	                                challenge response. You only need to keep this running briefly.
+	                            </li>
+	                            <li>
+	                                Open the link in a new window to make sure it's working:<br/>
+	                                <a target="_blank"></a>
+	                            </li>
+	                            <li>
+	                                Click "I'm now running this command..." button when the file is being
+	                                served on your domain.
+	                            </li>
+	                        </ol>
+	                    </div>
+	                    <div class="form-group">
+		                    <label>Run this command on <span class="domain">foobar.com</span>'s server:</label><br/>
+		                    <textarea class="form-control" rows=15 readonly></textarea>
+	                    </div>
+	                    <div>
+	                        <input type="submit" value="I'm now running this command on foobar.com"/>
+	                        <span style="display:none;"></span>
+	                    </div>
+	                </div>
+	
+	                <div class="tab">
+	                    <div class="help-content">
+	                        How to host this file on your server:<br/>
+	                        <ol>
+	                            <li>
+	                                SSH into your domain as someone with write access to
+	                                your static web directory:<br/>
+	                                <pre class="ssh">ssh ubuntu@foobar.com</pre>
+	                            </li>
+	                            <li>
+	                                Create the ".well-known/acme-challenge/" directory
+	                                in your webserver's static file path:<br/>
+	                                <pre class="wwwdir">mkdir -p /path/to/www/.well-known/acme-challenge/</pre>
+	                            </li>
+	                            <li>
+	                                Add the static folder to your webserver's config
+	                                (if you haven't already):<br/>
+	                                <pre class="nginx_location">server {...</pre>
+	                            </li>
+	                            <li>
+	                                Create the file with the necessary contents:<br/>
+	                                <pre class="file_cmd">echo ...</pre>
+	                            </li>
+	                            <li>
+	                                Open the link in a new window to make sure it's working:<br/>
+	                                <a target="_blank"></a>
+	                            </li>
+	                            <li>
+	                                Click "I'm now serving this file..." button when the file is being
+	                                served on your domain.
+	                            </li>
+	                        </ol>
+	                    </div>
+		                <div class="form_group">
+	                        <label>Serve this content:</label>
+	                        <input type="text" class="form-control"  class="file_data" value="" readonly/>
+	                    </div>
+                        <button type="submit" class="file_submit">I'm now serving this file on foobar.com</button>
+                        <span style="display:none;"></span>
+	                </div>
+	            </div>
+	        </div>
+	    </div>
+    </div>
+</div>
+    <hr/>
+
+    <!--#################################-->
+    <!--##  Step 5: Issue Certificate  ##-->
+    <!--#################################-->
+<div class="panel panel-default">
+	<div class="panel-heading">
+		<h3 class="panel-title">Step 5: Install Certificate (<span id="step5_pending">waiting...</span>)</h3>
+	</div>
+	<div class="panel-body">
+	    <div id="step5" style="display:none;">
+			<div class="alert alert-info" role="alert">
+	            Congratulations! Let's Encrypt has issued you a certificate for your domains!
+	            Below is the signed certificate you can use on your website to
+	        </div>
+            Nginx installation instructions:<br/>
+            <ol>
+                <li>
+                    Copy and paste both the below domain certificate and the below
+                    intermediate certificate into the same text file called "chained.pem".
+                </li>
+                <li>
+                    If not done already, generate non-default dhparams.<br/>
+                    <code>openssl dhparam -out dhparam.pem 4096</code>
+                </li>
+                <li>
+                    Copy "chained.pem" and "dhparam.pem" to /etc/ssl/certs/.<br/>
+                    <pre>
+scp chained.pem root@foo.com:/etc/ssl/certs/chained.pem
+scp dhparam.pem root@foo.com:/etc/ssl/certs/dhparam.pem
+</pre>
+                </li>
+                <li>
+                    Copy "domain.key" /etc/ssl/private/.<br/>
+                    <code>scp domain.key root@foo.com:/etc/ssl/private/domain.key</code><br/>
+                </li>
+                <li>
+                    Update your webserver config to use https (examples below).<br/>
+<pre>
+server {
+    listen 443;
+    server_name foo.com;
+    ssl on;
+    ssl_certificate /etc/ssl/certs/chained.pem;
+    ssl_certificate_key /etc/ssl/private/domain.key;
+    ssl_session_timeout 5m;
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA;
+    ssl_session_cache shared:SSL:50m;
+    ssl_dhparam /etc/ssl/certs/dhparam.pem;
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        return 200 'Hello world!';
+        add_header Content-Type text/plain;
+    }
+}
+</pre>
+                </li>
+            </ol>
+            Apache installation instructions:<br/>
+            <ol>
+                <li>
+                    Copy and paste the below domain certificate into file "domain.crt".
+                </li>
+                <li>
+                    Copy and paste the below intermediate certificate into file "intermediate.pem".
+                </li>
+                <li>
+                    Copy "domain.crt" and "intermediate.pem" to /etc/ssl/certs/.<br/>
+                    <pre>
+scp domain.crt root@foo.com:/etc/ssl/certs/domain.crt
+scp intermediate.pem root@foo.com:/etc/ssl/certs/intermediate.pem
+</pre>
+                </li>
+                <li>
+                    Copy "domain.key" /etc/ssl/private/.<br/>
+                    <code>scp domain.key root@foo.com:/etc/ssl/private/domain.key</code><br/>
+                </li>
+                <li>
+                    Update your webserver config to use https (examples below).<br/>
+<pre>
+&lt;VirtualHost _default_:443&gt;
+        ServerName foo.com:443
+        ServerAlias www.foo.com
+        DocumentRoot /var/www/foo.com/html
+        SSLEngine on
+        SSLCertificateFile    /etc/ssl/certs/domain.crt
+        SSLCertificateKeyFile /etc/ssl/private/domain.key
+        SSLCertificateChainFile /etc/ssl/certs/intermediate.pem
+        SSLProtocol all -SSLv2 -SSLv3
+        SSlCipherSuite ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA;
+        SSLHonorCipherOrder on
+        &lt;Directory /var/www/foo.com/html&gt;
+                Options Indexes FollowSymLinks MultiViews
+                AllowOverride All
+                Order allow,deny
+                allow from all
+        &lt;/Directory&gt;
+&lt;/VirtualHost&gt;
+</pre>
+            </li>
+        </ol>
+		<div class="form-group">
+            <label for="csr">Signed Certificate:</label><br/>
+            <textarea id="crt" readonly class="form-control" rows=20>></textarea>
+        </div>
+        <div class="form-group">
+            <label for="csr">Intermediate Certificate:</label><br/>
+<textarea readonly class="form-control" rows=20>
+-----BEGIN CERTIFICATE-----
+MIIEqDCCA5CgAwIBAgIRAJgT9HUT5XULQ+dDHpceRL0wDQYJKoZIhvcNAQELBQAw
+PzEkMCIGA1UEChMbRGlnaXRhbCBTaWduYXR1cmUgVHJ1c3QgQ28uMRcwFQYDVQQD
+Ew5EU1QgUm9vdCBDQSBYMzAeFw0xNTEwMTkyMjMzMzZaFw0yMDEwMTkyMjMzMzZa
+MEoxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MSMwIQYDVQQD
+ExpMZXQncyBFbmNyeXB0IEF1dGhvcml0eSBYMTCCASIwDQYJKoZIhvcNAQEBBQAD
+ggEPADCCAQoCggEBAJzTDPBa5S5Ht3JdN4OzaGMw6tc1Jhkl4b2+NfFwki+3uEtB
+BaupnjUIWOyxKsRohwuj43Xk5vOnYnG6eYFgH9eRmp/z0HhncchpDpWRz/7mmelg
+PEjMfspNdxIknUcbWuu57B43ABycrHunBerOSuu9QeU2mLnL/W08lmjfIypCkAyG
+dGfIf6WauFJhFBM/ZemCh8vb+g5W9oaJ84U/l4avsNwa72sNlRZ9xCugZbKZBDZ1
+gGusSvMbkEl4L6KWTyogJSkExnTA0DHNjzE4lRa6qDO4Q/GxH8Mwf6J5MRM9LTb4
+4/zyM2q5OTHFr8SNDR1kFjOq+oQpttQLwNh9w5MCAwEAAaOCAZIwggGOMBIGA1Ud
+EwEB/wQIMAYBAf8CAQAwDgYDVR0PAQH/BAQDAgGGMH8GCCsGAQUFBwEBBHMwcTAy
+BggrBgEFBQcwAYYmaHR0cDovL2lzcmcudHJ1c3RpZC5vY3NwLmlkZW50cnVzdC5j
+b20wOwYIKwYBBQUHMAKGL2h0dHA6Ly9hcHBzLmlkZW50cnVzdC5jb20vcm9vdHMv
+ZHN0cm9vdGNheDMucDdjMB8GA1UdIwQYMBaAFMSnsaR7LHH62+FLkHX/xBVghYkQ
+MFQGA1UdIARNMEswCAYGZ4EMAQIBMD8GCysGAQQBgt8TAQEBMDAwLgYIKwYBBQUH
+AgEWImh0dHA6Ly9jcHMucm9vdC14MS5sZXRzZW5jcnlwdC5vcmcwPAYDVR0fBDUw
+MzAxoC+gLYYraHR0cDovL2NybC5pZGVudHJ1c3QuY29tL0RTVFJPT1RDQVgzQ1JM
+LmNybDATBgNVHR4EDDAKoQgwBoIELm1pbDAdBgNVHQ4EFgQUqEpqYwR93brm0Tm3
+pkVl7/Oo7KEwDQYJKoZIhvcNAQELBQADggEBANHIIkus7+MJiZZQsY14cCoBG1hd
+v0J20/FyWo5ppnfjL78S2k4s2GLRJ7iD9ZDKErndvbNFGcsW+9kKK/TnY21hp4Dd
+ITv8S9ZYQ7oaoqs7HwhEMY9sibED4aXw09xrJZTC9zK1uIfW6t5dHQjuOWv+HHoW
+ZnupyxpsEUlEaFb+/SCI4KCSBdAsYxAcsHYI5xxEI4LutHp6s3OT2FuO90WfdsIk
+6q78OMSdn875bNjdBYAqxUp2/LEIHfDBkLoQz0hFJmwAbYahqKaLn73PAAm1X2kj
+f1w8DdnkabOLGeOVcj9LQ+s67vBykx4anTjURkbqZslUEUsn2k5xeua2zUk=
+-----END CERTIFICATE-----
+</textarea>
+	        </div>
+	        <div class="form-group">
+	            <form action="https://www.ssllabs.com/ssltest/analyze.html" target="_blank">
+	                <input id="ssltest_domain" type="hidden" name="d" value="foobar.com">
+	                <input type="submit" value="Test my install"/>
+	            </form>
+	        </div>
+	    </div>
+	</div>
+</div>
+    <hr/>
+
+    <footer class="footer">
+	    <div class="container">
+        <p class="text-muted">Released under MIT license | Source code: <a href="https://github.com/freekrai/instanthttps" target="_blank">https://github.com/freekrai/instanthttps</a></p>
+	    </div>
+    </footer>
+    <script src="/assets/js/app.js"></script>
+</body>
+</html>
